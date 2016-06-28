@@ -20,7 +20,7 @@
 #include "sfm/ransac_homography.h"
 #include "sfm/visualizer.h"
 
-#define MAX_PIXELS 1000000
+#define MAX_PIXELS 6000000
 
 int
 main (int argc, char** argv)
@@ -67,16 +67,16 @@ main (int argc, char** argv)
         << img2_desc.size() << " descriptors." << std::endl;
 
     /* Prepare matching data. */
-    util::AlignedMemory<float> descr1, descr2;
-    descr1.allocate(128 * sizeof(float) * img1_desc.size());
-    descr2.allocate(128 * sizeof(float) * img2_desc.size());
-    float* data_ptr = descr1.begin();
+    util::AlignedMemory<math::Vec128f> descr1, descr2;
+    descr1.resize(img1_desc.size());
+    descr2.resize(img2_desc.size());
+    float* data_ptr = descr1.data()->begin();
     for (std::size_t i = 0; i < img1_desc.size(); ++i, data_ptr += 128)
     {
         sfm::Sift::Descriptor const& d = img1_desc[i];
         std::copy(d.data.begin(), d.data.end(), data_ptr);
     }
-    data_ptr = descr2.begin();
+    data_ptr = descr2.data()->begin();
     for (std::size_t i = 0; i < img2_desc.size(); ++i, data_ptr += 128)
     {
         sfm::Sift::Descriptor const& d = img2_desc[i];
@@ -90,15 +90,15 @@ main (int argc, char** argv)
     matching_opts.lowe_ratio_threshold = 0.8f;
     sfm::Matching::Result matching_result;
     sfm::Matching::twoway_match(matching_opts,
-        descr1.begin(), img1_desc.size(),
-        descr2.begin(), img2_desc.size(), &matching_result);
+        descr1.data()->begin(), img1_desc.size(),
+        descr2.data()->begin(), img2_desc.size(), &matching_result);
     sfm::Matching::remove_inconsistent_matches(&matching_result);
 
     std::cout << "Found " << sfm::Matching::count_consistent_matches
         (matching_result) << " consistent matches." << std::endl;
 
     /* Setup correspondences. */
-    sfm::Correspondences corr_all;
+    sfm::Correspondences2D2D corr_all;
     std::vector<int> const& m12 = matching_result.matches_1_2;
     for (std::size_t i = 0; i < m12.size(); ++i)
     {
@@ -107,7 +107,7 @@ main (int argc, char** argv)
 
         sfm::Sift::Descriptor const& d1 = img1_desc[i];
         sfm::Sift::Descriptor const& d2 = img2_desc[m12[i]];
-        sfm::Correspondence c2d2d;
+        sfm::Correspondence2D2D c2d2d;
         c2d2d.p1[0] = d1.x; c2d2d.p1[1] = d1.y;
         c2d2d.p2[0] = d2.x; c2d2d.p2[1] = d2.y;
         corr_all.push_back(c2d2d);
@@ -124,7 +124,7 @@ main (int argc, char** argv)
     ransac_fundamental.estimate(corr_all, &ransac_fundamental_result);
 
     /* Setup filtered correspondences. */
-    sfm::Correspondences corr_f;
+    sfm::Correspondences2D2D corr_f;
     for (std::size_t i = 0; i < ransac_fundamental_result.inliers.size(); ++i)
         corr_f.push_back(corr_all[ransac_fundamental_result.inliers[i]]);
 
@@ -139,7 +139,7 @@ main (int argc, char** argv)
     ransac_homography.estimate(corr_all, &ransac_homography_result);
 
     /* Setup filtered correspondences. */
-    sfm::Correspondences corr_h;
+    sfm::Correspondences2D2D corr_h;
     for (std::size_t i = 0; i < ransac_homography_result.inliers.size(); ++i)
         corr_h.push_back(corr_all[ransac_homography_result.inliers[i]]);
 

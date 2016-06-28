@@ -31,7 +31,6 @@ typedef std::vector<CorrespondenceIndex> CorrespondenceIndices;
 /**
  * Two image coordinates which correspond to each other in terms of observing
  * the same point in the scene.
- * TODO: Rename this to Correspondence2D2D.
  */
 struct Correspondence2D2D
 {
@@ -51,4 +50,4 @@ struct Correspondence2D3D
 
 SFM_NAMESPACE_END
 
-#endif  // SFM_CORRESPONDENCE_HEADER
+#endif  /* SFM_CORRESPONDENCE_HEADER */
